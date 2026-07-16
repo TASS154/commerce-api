@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { api, useStore } from "@/lib/store";
 
 export default function CartPage() {
@@ -139,7 +139,7 @@ export default function CartPage() {
   );
 }
 
-const primaryBtn: React.CSSProperties = {
+const primaryBtn: CSSProperties = {
   background: "var(--accent)",
   color: "#1a1510",
   border: "none",
@@ -149,7 +149,7 @@ const primaryBtn: React.CSSProperties = {
   cursor: "pointer",
 };
 
-const secondaryBtn: React.CSSProperties = {
+const secondaryBtn: CSSProperties = {
   background: "transparent",
   color: "var(--text)",
   border: "1px solid var(--stroke)",

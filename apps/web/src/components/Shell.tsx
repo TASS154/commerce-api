@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { LOCALES, type Locale } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 
@@ -103,7 +103,7 @@ export function Shell({ children }: { children: ReactNode }) {
   );
 }
 
-const btnPrimary: React.CSSProperties = {
+const btnPrimary: CSSProperties = {
   background: "var(--accent)",
   color: "#1a1510",
   border: "none",
@@ -113,7 +113,7 @@ const btnPrimary: React.CSSProperties = {
   cursor: "pointer",
 };
 
-const btnGhost: React.CSSProperties = {
+const btnGhost: CSSProperties = {
   background: "transparent",
   color: "var(--text-muted)",
   border: "1px solid var(--stroke)",

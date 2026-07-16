@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useStore } from "@/lib/store";
 
 export default function ArchitecturePage() {
@@ -62,7 +63,7 @@ export default function ArchitecturePage() {
   );
 }
 
-const card: React.CSSProperties = {
+const card: CSSProperties = {
   marginTop: 22,
   padding: 20,
   borderRadius: 14,
@@ -70,12 +71,12 @@ const card: React.CSSProperties = {
   background: "var(--surface)",
 };
 
-const h2: React.CSSProperties = {
+const h2: CSSProperties = {
   marginTop: 0,
   fontSize: 18,
 };
 
-const pre: React.CSSProperties = {
+const pre: CSSProperties = {
   margin: 0,
   whiteSpace: "pre-wrap",
   fontSize: 12.5,
