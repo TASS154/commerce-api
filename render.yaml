@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: vespera-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: CORS_ORIGIN
+        sync: false
+      - key: PUBLIC_WEB_URL
+        sync: false
+      - key: PUBLIC_API_URL
+        sync: false
+      - key: NODE_ENV
+        value: production
+      - key: PGLITE_PATH
+        value: /data/pglite
+      - key: DATABASE_URL
+        sync: false

@@ -72,7 +72,7 @@ export async function createCheckout(user: AuthUser, raw: unknown) {
       .where(
         and(eq(products.id, line.productId), sql`${products.stock} >= ${line.quantity}`),
       )
-      .returning({ id: products.id });
+      .returning();
 
     if (!updated[0]) {
       const err = new Error("Stock race detected — retry checkout");

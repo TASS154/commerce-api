@@ -69,11 +69,12 @@ export async function buildApp() {
   await app.register(routes);
 
   app.setErrorHandler((err, _req, reply) => {
-    const status = (err as { statusCode?: number }).statusCode ?? 500;
-    if (status >= 500) app.log.error(err);
+    const error = err as Error & { statusCode?: number };
+    const status = error.statusCode ?? 500;
+    if (status >= 500) app.log.error(error);
     reply.code(status).send({
       error: status >= 500 ? "internal_error" : "request_error",
-      message: status >= 500 ? "Unexpected error" : err.message,
+      message: status >= 500 ? "Unexpected error" : error.message,
     });
   });
 

@@ -23,7 +23,7 @@ export const config = {
   publicApiUrl: env("PUBLIC_API_URL", "http://localhost:4000"),
   publicWebUrl: env("PUBLIC_WEB_URL", "http://localhost:3000"),
   databaseUrl: env("DATABASE_URL"),
-  pglitePath: path.join(__dirname, "..", "data", "pglite"),
+  pglitePath: env("PGLITE_PATH", path.join(__dirname, "..", "data", "pglite")),
   rateLimit: {
     windowMs: envInt("RATE_LIMIT_WINDOW_MS", 60_000),
     max: envInt("RATE_LIMIT_MAX", 60),

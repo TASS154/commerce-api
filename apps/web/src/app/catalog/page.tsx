@@ -34,8 +34,11 @@ export default function CatalogPage() {
       </h1>
       <p style={{ color: "var(--text-muted)", marginTop: 0, marginBottom: 28 }}>{tx("featured")}</p>
       {error && (
-        <p style={{ color: "var(--danger)" }}>
-          {error} — start the API (`npm run dev:api`).
+        <p style={{ color: "var(--danger)", maxWidth: 560, lineHeight: 1.5 }}>
+          {error}
+          {error.includes("localhost") || error.includes("dev:api")
+            ? ""
+            : " Locally: npm run dev:api. Production: point NEXT_PUBLIC_API_URL at the hosted API."}
         </p>
       )}
       <div

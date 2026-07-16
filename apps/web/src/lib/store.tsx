@@ -34,7 +34,19 @@ type Store = {
 
 const Ctx = createContext<Store | null>(null);
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+function resolveApiBase(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (fromEnv) return fromEnv.replace(/\/$/, "");
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1") return "http://localhost:4000";
+  }
+  // Never default to localhost on deployed hosts — that triggers Chrome's
+  // "access other apps on this device" / local-network permission prompt.
+  return "";
+}
+
+const API_BASE = resolveApiBase();
 
 export function Providers({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("en");
@@ -96,7 +108,7 @@ export function Providers({ children }: { children: ReactNode }) {
       signInDemo,
       signOut,
       apiBase: API_BASE,
-      docsUrl: `${API_BASE}/docs`,
+      docsUrl: API_BASE ? `${API_BASE}/docs` : "#",
     }),
     [locale, setLocale, cart, addToCart, clearCart, session, signInDemo, signOut],
   );
@@ -114,10 +126,16 @@ export async function api<T>(
   path: string,
   opts: RequestInit & { token?: string | null } = {},
 ): Promise<T> {
+  const base = resolveApiBase();
+  if (!base) {
+    throw new Error(
+      "API offline — set NEXT_PUBLIC_API_URL to the hosted Vespera API",
+    );
+  }
   const headers = new Headers(opts.headers);
   headers.set("Content-Type", "application/json");
   if (opts.token) headers.set("Authorization", `Bearer ${opts.token}`);
-  const res = await fetch(`${API_BASE}${path}`, { ...opts, headers });
+  const res = await fetch(`${base}${path}`, { ...opts, headers });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(data.message || data.error || `HTTP ${res.status}`);
