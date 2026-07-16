@@ -59,7 +59,7 @@ export default function CatalogPage() {
             }}
           >
             <div style={{ height: 160, background: p.imageGradient }} />
-            <div style={{ padding: 16, displayContent: "space-between", flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ padding: 16, justifyContent: "space-between", flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
               <div>
                 <h2 style={{ margin: "0 0 6px", fontSize: 18 }}>{pickLocalized(p.name, locale)}</h2>
                 <p style={{ margin: 0, color: "var(--text-muted)", fontSize: 13, lineHeight: 1.45 }}>
