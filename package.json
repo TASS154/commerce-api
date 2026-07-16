@@ -1,0 +1,22 @@
+{
+  "name": "commerce-api",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Vespera — horizontally scalable commerce platform (API + demo storefront)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev -w @vespera/api",
+    "dev:web": "npm run dev -w @vespera/web",
+    "build": "npm run build -w @vespera/shared && npm run build -w @vespera/api && npm run build -w @vespera/web",
+    "db:seed": "npm run db:seed -w @vespera/api",
+    "lint": "npm run lint -w @vespera/web --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "author": "Thiago Alexandre Santos Silva"
+}
