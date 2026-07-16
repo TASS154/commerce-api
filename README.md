@@ -19,15 +19,32 @@ Premium commerce **demo platform** with a separately deployable Node API and a N
 cp .env.example .env
 npm install
 npm run build -w @vespera/shared
+
+# Start Postgres (Docker Desktop required)
+npm run db:up
+
 npm run dev:api
 # other terminal
 npm run dev:web
 ```
 
 - Storefront: http://localhost:3000  
-- API health: http://localhost:4000/health  
+- API health: http://localhost:4000/health (`db` should report `postgres`)  
 - OpenAPI: http://localhost:4000/docs  
 - Architecture page: http://localhost:3000/architecture  
+
+### Database modes
+
+| Mode | How | When |
+|---|---|---|
+| **Postgres (recommended)** | `npm run db:up` + `DATABASE_URL` in `.env` (host port **5433**) | Local demos that mirror production scale |
+| **PGlite** | Leave `DATABASE_URL` empty | Quick try without Docker |
+
+```bash
+npm run db:up      # docker compose up -d
+npm run db:logs    # follow Postgres logs
+npm run db:down    # stop container (keeps volume)
+```
 
 ### Demo login (recruiters)
 
@@ -39,14 +56,6 @@ Authorization: Bearer demo:recruiter@vespera.demo
 
 2. Add products → checkout with Pix or card.  
 3. For Pix, use **Simulate Pix paid** (calls `/v1/demo/simulate-pix-paid`).
-
-### Optional real Postgres
-
-```bash
-docker compose up -d
-# set in .env:
-# DATABASE_URL=postgres://vespera:vespera@localhost:5432/vespera
-```
 
 ### Optional Firebase Google sign-in
 

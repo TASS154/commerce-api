@@ -11,6 +11,9 @@
     "dev:api": "npm run dev -w @vespera/api",
     "dev:web": "npm run dev -w @vespera/web",
     "build": "npm run build -w @vespera/shared && npm run build -w @vespera/api && npm run build -w @vespera/web",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f postgres",
     "db:seed": "npm run db:seed -w @vespera/api",
     "lint": "npm run lint -w @vespera/web --if-present"
   },
