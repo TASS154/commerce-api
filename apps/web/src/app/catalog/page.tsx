@@ -1,20 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { pickLocalized } from "@/lib/i18n";
 import { api, useStore } from "@/lib/store";
-
-type Product = {
-  id: string;
-  slug: string;
-  name: Record<string, string>;
-  description: Record<string, string>;
-  priceCents: number;
-  stock: number;
-  featured: boolean;
-  imageGradient: string;
-  category: string;
-};
+import type { Product } from "@/lib/types";
 
 export default function CatalogPage() {
   const { locale, tx, addToCart } = useStore();
@@ -61,10 +51,24 @@ export default function CatalogPage() {
               flexDirection: "column",
             }}
           >
-            <div style={{ height: 160, background: p.imageGradient }} />
+            <Link href={`/product/${p.slug}`} style={{ display: "block" }}>
+              {p.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={p.imageUrl}
+                  alt={pickLocalized(p.name, locale)}
+                  loading="lazy"
+                  style={{ height: 160, width: "100%", objectFit: "cover", display: "block" }}
+                />
+              ) : (
+                <div style={{ height: 160, background: p.imageGradient }} />
+              )}
+            </Link>
             <div style={{ padding: 16, justifyContent: "space-between", flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
               <div>
-                <h2 style={{ margin: "0 0 6px", fontSize: 18 }}>{pickLocalized(p.name, locale)}</h2>
+                <Link href={`/product/${p.slug}`}>
+                  <h2 style={{ margin: "0 0 6px", fontSize: 18 }}>{pickLocalized(p.name, locale)}</h2>
+                </Link>
                 <p style={{ margin: 0, color: "var(--text-muted)", fontSize: 13, lineHeight: 1.45 }}>
                   {pickLocalized(p.description, locale)}
                 </p>

@@ -5,6 +5,7 @@ import admin from "firebase-admin";
 import { config, firebaseIsConfigured } from "../config.js";
 import { getDb } from "../db/client.js";
 import { users } from "../db/schema.js";
+import { loadUserById, verifySessionToken } from "../services/auth-local.js";
 
 export type AuthUser = {
   id: string;
@@ -62,7 +63,7 @@ async function upsertUser(input: {
   if (existing[0]) {
     return {
       id: existing[0].id,
-      firebaseUid: existing[0].firebaseUid,
+      firebaseUid: existing[0].firebaseUid ?? "",
       email: existing[0].email,
       displayName: existing[0].displayName,
       demo: input.firebaseUid.startsWith("demo:"),
@@ -75,6 +76,7 @@ async function upsertUser(input: {
     firebaseUid: input.firebaseUid,
     email: input.email,
     displayName: input.displayName ?? null,
+    authProvider: input.firebaseUid.startsWith("demo:") ? "demo" : "firebase",
   });
 
   return {
@@ -116,11 +118,28 @@ export async function authenticate(
     return;
   }
 
+  // Local email/password sessions: a compact JWT signed with SESSION_JWT_SECRET
+  // (HS256). Real Firebase ID tokens also have three dot-separated segments,
+  // but they're signed with Google's RS256 keys, so they simply fail this
+  // HS256 verification and fall through to the Firebase path below.
+  if (token.split(".").length === 3) {
+    const claims = await verifySessionToken(token);
+    if (claims) {
+      const user = await loadUserById(claims.sub);
+      if (user) {
+        request.user = user;
+        return;
+      }
+      reply.code(401).send({ error: "unauthorized", message: "Session user not found" });
+      return;
+    }
+  }
+
   if (!firebaseIsConfigured()) {
     reply.code(401).send({
       error: "auth_not_configured",
       message:
-        "Firebase Admin is not configured. Use Demo Auth (Bearer demo:you@email.com) or set FIREBASE_* env vars.",
+        "Firebase Admin is not configured. Use Demo Auth (Bearer demo:you@email.com), a Vespera account (email/password), or set FIREBASE_* env vars.",
     });
     return;
   }

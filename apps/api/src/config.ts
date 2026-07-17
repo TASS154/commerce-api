@@ -24,6 +24,7 @@ export const config = {
   publicWebUrl: env("PUBLIC_WEB_URL", "http://localhost:3000"),
   databaseUrl: env("DATABASE_URL"),
   pglitePath: env("PGLITE_PATH", path.join(__dirname, "..", "data", "pglite")),
+  sessionJwtSecret: env("SESSION_JWT_SECRET", "vespera-dev-jwt-change-me"),
   rateLimit: {
     windowMs: envInt("RATE_LIMIT_WINDOW_MS", 60_000),
     max: envInt("RATE_LIMIT_MAX", 60),

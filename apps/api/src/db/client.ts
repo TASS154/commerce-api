@@ -36,6 +36,7 @@ export async function initDb(): Promise<Db> {
     db = createPglite(config.pglitePath);
   }
   await migrate(db);
+  await migrateAlter(db);
   return db;
 }
 
@@ -137,4 +138,35 @@ async function migrate(database: Db) {
   await database.execute(sql`CREATE INDEX IF NOT EXISTS orders_payment_ref_idx ON orders(payment_ref);`);
   await database.execute(sql`CREATE INDEX IF NOT EXISTS order_items_order_idx ON order_items(order_id);`);
   await database.execute(sql`CREATE INDEX IF NOT EXISTS rate_limit_window_idx ON rate_limit_buckets(window_start);`);
+}
+
+/**
+ * Additive schema evolution for tables created by earlier deploys.
+ * `CREATE TABLE IF NOT EXISTS` above never alters existing tables, so new
+ * columns for already-provisioned databases (e.g. a live Railway Postgres)
+ * land here as idempotent `ADD COLUMN IF NOT EXISTS` statements.
+ *
+ * Each statement runs in its own try/catch: Postgres supports
+ * `IF NOT EXISTS` on `ADD COLUMN` natively, but PGlite's parser support can
+ * lag behind, so a failure there (or any transient issue) never blocks boot.
+ */
+async function migrateAlter(database: Db) {
+  const statements = [
+    `ALTER TABLE products ADD COLUMN IF NOT EXISTS description_deep jsonb NOT NULL DEFAULT '{}';`,
+    `ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url text;`,
+    `ALTER TABLE products ADD COLUMN IF NOT EXISTS specs jsonb;`,
+    `ALTER TABLE users ALTER COLUMN firebase_uid DROP NOT NULL;`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash text;`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider varchar(16) NOT NULL DEFAULT 'local';`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS users_email_uidx ON users(email);`,
+  ];
+
+  for (const statement of statements) {
+    try {
+      await database.execute(sql.raw(statement));
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn(`[migrateAlter] skipped (non-fatal): ${statement}`, (err as Error).message);
+    }
+  }
 }

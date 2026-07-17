@@ -1,32 +1,78 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { api, useStore } from "@/lib/store";
 
+type PixPayload = {
+  txid: string;
+  emvPayload: string;
+  copyPaste: string;
+  qrCodeDataUrl: string;
+  expiresAt: string;
+  amountCents: number;
+};
+
+type CardPayload = {
+  authorizationCode: string;
+  brand: string;
+  last4: string;
+  receiptId: string;
+  status: string;
+};
+
+type ChargeResult = {
+  clientAction?: {
+    type: "pix_qr" | "card_confirm";
+    payload: Record<string, unknown>;
+  };
+};
+
+type CheckoutResponse = {
+  order: { id: string; status: string; paymentRef?: string };
+  charge?: ChargeResult;
+};
+
 export default function CartPage() {
-  const { cart, clearCart, session, signInDemo, tx, apiBase } = useStore();
+  const { cart, clearCart, session, tx, apiBase } = useStore();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [pixRef, setPixRef] = useState<string | null>(null);
   const [lastStatus, setLastStatus] = useState<string | null>(null);
+  const [pix, setPix] = useState<PixPayload | null>(null);
+  const [card, setCard] = useState<CardPayload | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
   const total = cart.reduce((n, l) => n + l.priceCents * l.quantity, 0);
 
+  useEffect(() => {
+    if (!pix) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [pix]);
+
+  const countdown = useMemo(() => {
+    if (!pix) return null;
+    const remainingMs = new Date(pix.expiresAt).getTime() - now;
+    if (remainingMs <= 0) return tx("expired");
+    const totalSeconds = Math.floor(remainingMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${String(seconds).padStart(2, "0")}`;
+  }, [pix, now, tx]);
+
   async function checkout(method: "pix" | "card") {
-    if (!session) {
-      signInDemo();
-    }
-    const token = session?.token || "demo:recruiter@vespera.demo";
+    if (!session) return;
     setBusy(true);
     setMessage(null);
+    setPix(null);
+    setCard(null);
     try {
       const idempotencyKey = crypto.randomUUID();
-      const result = await api<{
-        order: { id: string; status: string; paymentRef?: string };
-        charge?: { paymentRef: string; clientAction?: { payload: Record<string, unknown> } };
-      }>("/v1/checkout", {
+      const result = await api<CheckoutResponse>("/v1/checkout", {
         method: "POST",
-        token,
+        token: session.token,
         body: JSON.stringify({
           paymentMethod: method,
           idempotencyKey,
@@ -34,7 +80,15 @@ export default function CartPage() {
         }),
       });
       setLastStatus(result.order.status);
-      setPixRef(result.order.paymentRef || result.charge?.paymentRef || null);
+      const clientAction = result.charge?.clientAction;
+      setPixRef(result.order.paymentRef ?? null);
+
+      if (clientAction?.type === "pix_qr") {
+        setPix(clientAction.payload as unknown as PixPayload);
+      } else if (clientAction?.type === "card_confirm") {
+        setCard(clientAction.payload as unknown as CardPayload);
+      }
+
       if (result.order.status === "paid") {
         setMessage(tx("orderPaid"));
         clearCart();
@@ -59,11 +113,23 @@ export default function CartPage() {
       });
       setLastStatus("paid");
       setMessage(tx("orderPaid"));
+      setPix(null);
       clearCart();
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Simulation failed");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function copyPixCode() {
+    if (!pix) return;
+    try {
+      await navigator.clipboard.writeText(pix.copyPaste);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      /* clipboard may be unavailable — ignore */
     }
   }
 
@@ -97,14 +163,35 @@ export default function CartPage() {
             <span>Total</span>
             <strong>R$ {(total / 100).toFixed(2)}</strong>
           </div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
-            <button disabled={busy} onClick={() => checkout("pix")} style={primaryBtn}>
-              {tx("checkoutPix")}
-            </button>
-            <button disabled={busy} onClick={() => checkout("card")} style={secondaryBtn}>
-              {tx("checkoutCard")}
-            </button>
-          </div>
+
+          {!session ? (
+            <div
+              style={{
+                marginTop: 12,
+                padding: 18,
+                borderRadius: 12,
+                border: "1px solid var(--stroke)",
+                background: "var(--bg-elevated)",
+              }}
+            >
+              <p style={{ margin: "0 0 6px", fontWeight: 600 }}>{tx("signInRequiredTitle")}</p>
+              <p style={{ margin: "0 0 14px", color: "var(--text-muted)", fontSize: 14 }}>
+                {tx("signInRequiredBody")}
+              </p>
+              <Link href="/auth" style={primaryBtn}>
+                {tx("goToSignIn")}
+              </Link>
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
+              <button disabled={busy} onClick={() => checkout("pix")} style={primaryBtn}>
+                {tx("checkoutPix")}
+              </button>
+              <button disabled={busy} onClick={() => checkout("card")} style={secondaryBtn}>
+                {tx("checkoutCard")}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -125,8 +212,60 @@ export default function CartPage() {
               {pixRef ? ` · ref: ${pixRef}` : ""}
             </p>
           )}
+
+          {pix && (
+            <div style={{ marginTop: 16, textAlign: "center" }}>
+              <h3 style={{ fontSize: 15, margin: "0 0 4px" }}>{tx("pixTitle")}</h3>
+              <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 14px" }}>{tx("pixHint")}</p>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={pix.qrCodeDataUrl}
+                alt="Pix QR code"
+                style={{ width: 200, height: 200, borderRadius: 12, background: "#fff", padding: 8 }}
+              />
+              <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 6, alignItems: "center" }}>
+                <code
+                  style={{
+                    fontSize: 11,
+                    color: "var(--text-muted)",
+                    wordBreak: "break-all",
+                    maxWidth: 420,
+                    padding: 10,
+                    borderRadius: 8,
+                    background: "var(--surface)",
+                    border: "1px solid var(--stroke)",
+                  }}
+                >
+                  {pix.copyPaste}
+                </code>
+                <button onClick={copyPixCode} style={secondaryBtn}>
+                  {copied ? tx("copied") : tx("copyPixCode")}
+                </button>
+                <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "6px 0 0" }}>
+                  {tx("txidLabel")}: <code>{pix.txid}</code>
+                </p>
+                <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>
+                  {tx("expiresIn")}: <strong>{countdown}</strong>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {card && (
+            <div style={{ marginTop: 16 }}>
+              <h3 style={{ fontSize: 15, margin: "0 0 10px" }}>{tx("cardApprovedTitle")}</h3>
+              <div style={{ display: "grid", gap: 4, fontSize: 13, color: "var(--text-muted)" }}>
+                <span>{tx("brandLabel")}: <strong style={{ color: "var(--text)" }}>{card.brand.toUpperCase()}</strong></span>
+                <span>{tx("last4Label")}: <strong style={{ color: "var(--text)" }}>•••• {card.last4}</strong></span>
+                <span>{tx("authCodeLabel")}: <code>{card.authorizationCode}</code></span>
+                <span>{tx("receiptLabel")}: <code>{card.receiptId}</code></span>
+              </div>
+              <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 10 }}>{tx("simulatedNote")}</p>
+            </div>
+          )}
+
           {lastStatus === "pending_payment" && pixRef && (
-            <button disabled={busy} onClick={simulatePix} style={{ ...primaryBtn, marginTop: 12 }}>
+            <button disabled={busy} onClick={simulatePix} style={{ ...primaryBtn, marginTop: 16 }}>
               {tx("simulatePix")}
             </button>
           )}
@@ -147,6 +286,8 @@ const primaryBtn: CSSProperties = {
   padding: "12px 16px",
   fontWeight: 600,
   cursor: "pointer",
+  display: "inline-block",
+  textAlign: "center",
 };
 
 const secondaryBtn: CSSProperties = {

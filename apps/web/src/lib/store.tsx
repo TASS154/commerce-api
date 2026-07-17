@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -16,6 +17,7 @@ type CartLine = { productId: string; slug: string; name: string; priceCents: num
 type Session = {
   token: string;
   email: string;
+  demo: boolean;
 };
 
 type Store = {
@@ -23,11 +25,15 @@ type Store = {
   setLocale: (l: Locale) => void;
   tx: (key: DictKey) => string;
   cart: CartLine[];
+  cartPulse: boolean;
   addToCart: (line: Omit<CartLine, "quantity">, qty?: number) => void;
   clearCart: () => void;
   session: Session | null;
   signInDemo: () => void;
   signOut: () => void;
+  registerLocal: (email: string, password: string, displayName?: string) => Promise<void>;
+  loginLocal: (email: string, password: string) => Promise<void>;
+  setSessionToken: (token: string, email: string) => void;
   apiBase: string;
   docsUrl: string;
 };
@@ -51,7 +57,9 @@ const API_BASE = resolveApiBase();
 export function Providers({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("en");
   const [cart, setCart] = useState<CartLine[]>([]);
+  const [cartPulse, setCartPulse] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
+  const pulseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("vespera.locale") as Locale | null;
@@ -64,6 +72,10 @@ export function Providers({ children }: { children: ReactNode }) {
         /* ignore */
       }
     }
+  }, []);
+
+  useEffect(() => () => {
+    if (pulseTimeout.current) clearTimeout(pulseTimeout.current);
   }, []);
 
   const setLocale = useCallback((l: Locale) => {
@@ -81,20 +93,55 @@ export function Providers({ children }: { children: ReactNode }) {
       }
       return [...prev, { ...line, quantity: qty }];
     });
+    setCartPulse(true);
+    if (pulseTimeout.current) clearTimeout(pulseTimeout.current);
+    pulseTimeout.current = setTimeout(() => setCartPulse(false), 650);
   }, []);
 
   const clearCart = useCallback(() => setCart([]), []);
 
-  const signInDemo = useCallback(() => {
-    const next = { token: "demo:recruiter@vespera.demo", email: "recruiter@vespera.demo" };
+  const persistSession = useCallback((next: Session) => {
     setSession(next);
     localStorage.setItem("vespera.session", JSON.stringify(next));
   }, []);
+
+  const signInDemo = useCallback(() => {
+    persistSession({ token: "demo:recruiter@vespera.demo", email: "recruiter@vespera.demo", demo: true });
+  }, [persistSession]);
 
   const signOut = useCallback(() => {
     setSession(null);
     localStorage.removeItem("vespera.session");
   }, []);
+
+  const registerLocal = useCallback(
+    async (email: string, password: string, displayName?: string) => {
+      const result = await api<{ token: string; user: { email: string } }>("/v1/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ email, password, displayName }),
+      });
+      persistSession({ token: result.token, email: result.user.email, demo: false });
+    },
+    [persistSession],
+  );
+
+  const loginLocal = useCallback(
+    async (email: string, password: string) => {
+      const result = await api<{ token: string; user: { email: string } }>("/v1/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+      persistSession({ token: result.token, email: result.user.email, demo: false });
+    },
+    [persistSession],
+  );
+
+  const setSessionToken = useCallback(
+    (token: string, email: string) => {
+      persistSession({ token, email, demo: false });
+    },
+    [persistSession],
+  );
 
   const value = useMemo<Store>(
     () => ({
@@ -102,15 +149,32 @@ export function Providers({ children }: { children: ReactNode }) {
       setLocale,
       tx: (key) => t(locale, key),
       cart,
+      cartPulse,
       addToCart,
       clearCart,
       session,
       signInDemo,
       signOut,
+      registerLocal,
+      loginLocal,
+      setSessionToken,
       apiBase: API_BASE,
       docsUrl: API_BASE ? `${API_BASE}/docs` : "#",
     }),
-    [locale, setLocale, cart, addToCart, clearCart, session, signInDemo, signOut],
+    [
+      locale,
+      setLocale,
+      cart,
+      cartPulse,
+      addToCart,
+      clearCart,
+      session,
+      signInDemo,
+      signOut,
+      registerLocal,
+      loginLocal,
+      setSessionToken,
+    ],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

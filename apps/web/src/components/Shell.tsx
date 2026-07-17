@@ -6,7 +6,7 @@ import { LOCALES, type Locale } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { tx, locale, setLocale, session, signInDemo, signOut, cart, docsUrl } = useStore();
+  const { tx, locale, setLocale, session, signOut, cart, cartPulse, docsUrl } = useStore();
   const cartCount = cart.reduce((n, l) => n + l.quantity, 0);
 
   return (
@@ -38,7 +38,11 @@ export function Shell({ children }: { children: ReactNode }) {
             <Link href="/catalog" style={{ color: "var(--text-muted)", fontSize: 14 }}>
               {tx("shop")}
             </Link>
-            <Link href="/cart" style={{ color: "var(--text-muted)", fontSize: 14 }}>
+            <Link
+              href="/cart"
+              className={cartPulse ? "cart-badge-pulse" : undefined}
+              style={{ color: "var(--text-muted)", fontSize: 14, display: "inline-block" }}
+            >
               {tx("cart")}
               {cartCount > 0 ? ` (${cartCount})` : ""}
             </Link>
@@ -72,17 +76,21 @@ export function Shell({ children }: { children: ReactNode }) {
               </select>
             </label>
             {session ? (
-              <button
-                onClick={signOut}
-                style={btnGhost}
-                title={session.email}
-              >
-                {tx("logout")}
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span
+                  style={{ fontSize: 12, color: "var(--text-muted)", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}
+                  title={session.email}
+                >
+                  {session.email}
+                </span>
+                <button onClick={signOut} style={btnGhost}>
+                  {tx("logout")}
+                </button>
+              </div>
             ) : (
-              <button onClick={signInDemo} style={btnPrimary}>
-                {tx("loginDemo")}
-              </button>
+              <Link href="/auth" style={btnPrimary}>
+                {tx("signIn")}
+              </Link>
             )}
           </div>
         </div>

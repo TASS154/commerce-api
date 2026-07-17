@@ -75,8 +75,24 @@ select {
 .rise-delay-2 { animation-delay: 0.16s; }
 .rise-delay-3 { animation-delay: 0.24s; }
 
+@keyframes cartPulse {
+  0% { transform: scale(1); color: var(--text-muted); }
+  35% { transform: scale(1.28); color: var(--accent); }
+  70% { transform: scale(0.94); }
+  100% { transform: scale(1); color: var(--text-muted); }
+}
+
+.cart-badge-pulse {
+  animation: cartPulse 0.55s ease;
+  transform-origin: left center;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rise {
+    animation: none;
+  }
+
+  .cart-badge-pulse {
     animation: none;
   }
 }

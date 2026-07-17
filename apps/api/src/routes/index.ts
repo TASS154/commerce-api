@@ -6,8 +6,11 @@ import { authenticate, verifyWebhookSignature } from "../plugins/auth.js";
 import { config, firebaseIsConfigured, paymentIsConfigured } from "../config.js";
 import { createCheckout, markOrderPaid, SimulatePixSchema } from "../services/orders.js";
 import { buildMockWebhook } from "../services/payment.js";
+import { authRoutes } from "./auth.js";
 
 export const routes: FastifyPluginAsync = async (app) => {
+  await app.register(authRoutes);
+
   app.get("/health", async () => ({
     ok: true,
     service: "vespera-api",

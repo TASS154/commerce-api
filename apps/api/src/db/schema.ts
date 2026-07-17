@@ -18,10 +18,16 @@ export const products = pgTable(
     sku: varchar("sku", { length: 64 }).notNull(),
     name: jsonb("name").$type<Record<string, string>>().notNull(),
     description: jsonb("description").$type<Record<string, string>>().notNull(),
+    descriptionDeep: jsonb("description_deep")
+      .$type<Record<string, string>>()
+      .notNull()
+      .default({}),
     priceCents: integer("price_cents").notNull(),
     stock: integer("stock").notNull().default(0),
     category: varchar("category", { length: 64 }).notNull(),
     imageGradient: text("image_gradient").notNull(),
+    imageUrl: text("image_url"),
+    specs: jsonb("specs").$type<Record<string, string>>(),
     featured: boolean("featured").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -36,12 +42,17 @@ export const users = pgTable(
   "users",
   {
     id: text("id").primaryKey(),
-    firebaseUid: varchar("firebase_uid", { length: 128 }).notNull(),
+    firebaseUid: varchar("firebase_uid", { length: 128 }),
     email: varchar("email", { length: 320 }).notNull(),
     displayName: varchar("display_name", { length: 160 }),
+    passwordHash: text("password_hash"),
+    authProvider: varchar("auth_provider", { length: 16 }).notNull().default("local"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [uniqueIndex("users_firebase_uid_uidx").on(t.firebaseUid)],
+  (t) => [
+    uniqueIndex("users_firebase_uid_uidx").on(t.firebaseUid),
+    uniqueIndex("users_email_uidx").on(t.email),
+  ],
 );
 
 export const orders = pgTable(

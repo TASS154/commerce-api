@@ -14,10 +14,13 @@ export const ProductSchema = z.object({
   sku: z.string(),
   name: z.record(LocaleSchema, z.string()),
   description: z.record(LocaleSchema, z.string()),
+  descriptionDeep: z.record(LocaleSchema, z.string()).optional(),
   priceCents: z.number().int().positive(),
   stock: z.number().int().nonnegative(),
   category: z.string(),
   imageGradient: z.string(),
+  imageUrl: z.string().url().nullable().optional(),
+  specs: z.record(z.string(), z.string()).nullable().optional(),
   featured: z.boolean(),
 });
 
