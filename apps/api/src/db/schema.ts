@@ -47,6 +47,7 @@ export const users = pgTable(
     displayName: varchar("display_name", { length: 160 }),
     passwordHash: text("password_hash"),
     authProvider: varchar("auth_provider", { length: 16 }).notNull().default("local"),
+    role: varchar("role", { length: 16 }).notNull().default("customer"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api, useStore } from "@/lib/store";
 
 type PixPayload = {
@@ -45,6 +45,8 @@ export default function CartPage() {
   const [now, setNow] = useState(() => Date.now());
 
   const total = cart.reduce((n, l) => n + l.priceCents * l.quantity, 0);
+  const pixExpired = Boolean(pix && new Date(pix.expiresAt).getTime() <= now);
+  const visualStatus = pixExpired && lastStatus === "pending_payment" ? "expired" : lastStatus;
 
   useEffect(() => {
     if (!pix) return;
@@ -92,11 +94,13 @@ export default function CartPage() {
       if (result.order.status === "paid") {
         setMessage(tx("orderPaid"));
         clearCart();
+      } else if (result.order.status === "canceled") {
+        setMessage(tx("orderCanceled"));
       } else {
         setMessage(tx("orderPending"));
       }
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Checkout failed");
+      setMessage(e instanceof Error ? e.message : tx("checkoutError"));
     } finally {
       setBusy(false);
     }
@@ -116,7 +120,7 @@ export default function CartPage() {
       setPix(null);
       clearCart();
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Simulation failed");
+      setMessage(e instanceof Error ? e.message : tx("checkoutError"));
     } finally {
       setBusy(false);
     }
@@ -133,61 +137,57 @@ export default function CartPage() {
     }
   }
 
+  function statusLabel(status: string | null) {
+    if (status === "paid") return tx("statusPaid");
+    if (status === "pending_payment") return tx("statusPending");
+    if (status === "expired") return tx("statusExpired");
+    if (status === "canceled") return tx("statusCanceled");
+    return status;
+  }
+
   return (
-    <div style={{ maxWidth: 720, margin: "0 auto", padding: "36px 20px 64px" }}>
-      <h1 style={{ fontFamily: "var(--font-display)", fontSize: 40, fontWeight: 400 }}>{tx("cart")}</h1>
+    <div className="page-narrow">
+      <p className="eyebrow">{tx("cart")}</p>
+      <h1 className="display" style={{ fontSize: 44, margin: "0 0 28px" }}>
+        {tx("cart")}
+      </h1>
+
       {cart.length === 0 ? (
-        <p style={{ color: "var(--text-muted)" }}>{tx("emptyCart")}</p>
+        <p className="muted">{tx("emptyCart")}</p>
       ) : (
-        <div style={{ display: "grid", gap: 12 }}>
+        <div>
           {cart.map((l) => (
-            <div
-              key={l.productId}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                padding: 14,
-                border: "1px solid var(--stroke)",
-                borderRadius: 12,
-                background: "var(--surface)",
-              }}
-            >
+            <div key={l.productId} className="line">
               <div>
                 <strong>{l.name}</strong>
-                <div style={{ color: "var(--text-muted)", fontSize: 13 }}>× {l.quantity}</div>
+                <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+                  × {l.quantity}
+                </div>
               </div>
               <div>R$ {((l.priceCents * l.quantity) / 100).toFixed(2)}</div>
             </div>
           ))}
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 18 }}>
+          <div className="line" style={{ fontSize: 18, borderBottom: 0 }}>
             <span>Total</span>
             <strong>R$ {(total / 100).toFixed(2)}</strong>
           </div>
 
           {!session ? (
-            <div
-              style={{
-                marginTop: 12,
-                padding: 18,
-                borderRadius: 12,
-                border: "1px solid var(--stroke)",
-                background: "var(--bg-elevated)",
-              }}
-            >
+            <div style={{ marginTop: 24 }}>
               <p style={{ margin: "0 0 6px", fontWeight: 600 }}>{tx("signInRequiredTitle")}</p>
-              <p style={{ margin: "0 0 14px", color: "var(--text-muted)", fontSize: 14 }}>
+              <p className="muted" style={{ margin: "0 0 16px", fontSize: 14 }}>
                 {tx("signInRequiredBody")}
               </p>
-              <Link href="/auth" style={primaryBtn}>
+              <Link href="/auth" className="btn">
                 {tx("goToSignIn")}
               </Link>
             </div>
           ) : (
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
-              <button disabled={busy} onClick={() => checkout("pix")} style={primaryBtn}>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 20 }}>
+              <button type="button" disabled={busy} onClick={() => checkout("pix")} className="btn">
                 {tx("checkoutPix")}
               </button>
-              <button disabled={busy} onClick={() => checkout("card")} style={secondaryBtn}>
+              <button type="button" disabled={busy} onClick={() => checkout("card")} className="btn-ghost">
                 {tx("checkoutCard")}
               </button>
             </div>
@@ -196,55 +196,51 @@ export default function CartPage() {
       )}
 
       {message && (
-        <div
-          style={{
-            marginTop: 24,
-            padding: 16,
-            borderRadius: 12,
-            border: "1px solid var(--stroke)",
-            background: "var(--bg-elevated)",
-          }}
-        >
-          <p style={{ margin: 0 }}>{message}</p>
-          {lastStatus && (
-            <p style={{ margin: "8px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
-              status: {lastStatus}
-              {pixRef ? ` · ref: ${pixRef}` : ""}
+        <div style={{ marginTop: 36, paddingTop: 28, borderTop: "1px solid var(--rule)" }}>
+          {visualStatus && (
+            <p className={`status status-${visualStatus === "pending_payment" ? "pending" : visualStatus}`}>
+              {statusLabel(visualStatus)}
+            </p>
+          )}
+          <p style={{ margin: "12px 0 0" }}>{pixExpired && lastStatus === "pending_payment" ? tx("orderExpired") : message}</p>
+          {pixRef && (
+            <p className="muted" style={{ margin: "8px 0 0", fontSize: 13 }}>
+              ref {pixRef}
             </p>
           )}
 
-          {pix && (
-            <div style={{ marginTop: 16, textAlign: "center" }}>
-              <h3 style={{ fontSize: 15, margin: "0 0 4px" }}>{tx("pixTitle")}</h3>
-              <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 14px" }}>{tx("pixHint")}</p>
+          {pix && !pixExpired && (
+            <div style={{ marginTop: 20, textAlign: "center" }}>
+              <h3 className="eyebrow">{tx("pixTitle")}</h3>
+              <p className="muted" style={{ fontSize: 13, margin: "0 0 16px" }}>
+                {tx("pixHint")}
+              </p>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={pix.qrCodeDataUrl}
                 alt="Pix QR code"
-                style={{ width: 200, height: 200, borderRadius: 12, background: "#fff", padding: 8 }}
+                style={{ width: 200, height: 200, background: "#fff", padding: 8 }}
               />
-              <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 6, alignItems: "center" }}>
+              <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8, alignItems: "center" }}>
                 <code
+                  className="muted"
                   style={{
                     fontSize: 11,
-                    color: "var(--text-muted)",
                     wordBreak: "break-all",
                     maxWidth: 420,
                     padding: 10,
-                    borderRadius: 8,
-                    background: "var(--surface)",
-                    border: "1px solid var(--stroke)",
+                    border: "1px solid var(--rule)",
                   }}
                 >
                   {pix.copyPaste}
                 </code>
-                <button onClick={copyPixCode} style={secondaryBtn}>
+                <button type="button" onClick={copyPixCode} className="btn-ghost">
                   {copied ? tx("copied") : tx("copyPixCode")}
                 </button>
-                <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "6px 0 0" }}>
+                <p className="muted" style={{ fontSize: 12, margin: "6px 0 0" }}>
                   {tx("txidLabel")}: <code>{pix.txid}</code>
                 </p>
-                <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>
+                <p className="muted" style={{ fontSize: 12, margin: 0 }}>
                   {tx("expiresIn")}: <strong>{countdown}</strong>
                 </p>
               </div>
@@ -252,24 +248,34 @@ export default function CartPage() {
           )}
 
           {card && (
-            <div style={{ marginTop: 16 }}>
-              <h3 style={{ fontSize: 15, margin: "0 0 10px" }}>{tx("cardApprovedTitle")}</h3>
-              <div style={{ display: "grid", gap: 4, fontSize: 13, color: "var(--text-muted)" }}>
-                <span>{tx("brandLabel")}: <strong style={{ color: "var(--text)" }}>{card.brand.toUpperCase()}</strong></span>
-                <span>{tx("last4Label")}: <strong style={{ color: "var(--text)" }}>•••• {card.last4}</strong></span>
-                <span>{tx("authCodeLabel")}: <code>{card.authorizationCode}</code></span>
-                <span>{tx("receiptLabel")}: <code>{card.receiptId}</code></span>
+            <div style={{ marginTop: 20 }}>
+              <h3 className="eyebrow">{tx("cardApprovedTitle")}</h3>
+              <div className="muted" style={{ display: "grid", gap: 4, fontSize: 14 }}>
+                <span>
+                  {tx("brandLabel")}: <strong style={{ color: "var(--ink)" }}>{card.brand.toUpperCase()}</strong>
+                </span>
+                <span>
+                  {tx("last4Label")}: <strong style={{ color: "var(--ink)" }}>•••• {card.last4}</strong>
+                </span>
+                <span>
+                  {tx("authCodeLabel")}: <code>{card.authorizationCode}</code>
+                </span>
+                <span>
+                  {tx("receiptLabel")}: <code>{card.receiptId}</code>
+                </span>
               </div>
-              <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 10 }}>{tx("simulatedNote")}</p>
+              <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>
+                {tx("simulatedNote")}
+              </p>
             </div>
           )}
 
-          {lastStatus === "pending_payment" && pixRef && (
-            <button disabled={busy} onClick={simulatePix} style={{ ...primaryBtn, marginTop: 16 }}>
+          {lastStatus === "pending_payment" && pixRef && !pixExpired && (
+            <button type="button" disabled={busy} onClick={simulatePix} className="btn" style={{ marginTop: 20 }}>
               {tx("simulatePix")}
             </button>
           )}
-          <p style={{ margin: "12px 0 0", fontSize: 12, color: "var(--text-muted)" }}>
+          <p className="muted" style={{ margin: "16px 0 0", fontSize: 12 }}>
             OpenAPI: <a href={`${apiBase}/docs`}>{apiBase}/docs</a>
           </p>
         </div>
@@ -277,24 +283,3 @@ export default function CartPage() {
     </div>
   );
 }
-
-const primaryBtn: CSSProperties = {
-  background: "var(--accent)",
-  color: "#1a1510",
-  border: "none",
-  borderRadius: 999,
-  padding: "12px 16px",
-  fontWeight: 600,
-  cursor: "pointer",
-  display: "inline-block",
-  textAlign: "center",
-};
-
-const secondaryBtn: CSSProperties = {
-  background: "transparent",
-  color: "var(--text)",
-  border: "1px solid var(--stroke)",
-  borderRadius: 999,
-  padding: "12px 16px",
-  cursor: "pointer",
-};

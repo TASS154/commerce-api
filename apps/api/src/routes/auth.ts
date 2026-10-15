@@ -1,18 +1,27 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { stripControlAndHtml } from "@vespera/shared";
 import { authenticate } from "../plugins/auth.js";
 import { AuthError, loginUser, registerUser } from "../services/auth-local.js";
 
-const RegisterSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8).max(128),
-  displayName: z.string().min(1).max(160).optional(),
-});
+const RegisterSchema = z
+  .object({
+    email: z.string().email().max(320).transform((s) => s.trim().toLowerCase()),
+    password: z.string().min(8).max(128),
+    displayName: z
+      .string()
+      .max(160)
+      .transform(stripControlAndHtml)
+      .optional(),
+  })
+  .strict();
 
-const LoginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1).max(128),
-});
+const LoginSchema = z
+  .object({
+    email: z.string().email().max(320).transform((s) => s.trim().toLowerCase()),
+    password: z.string().min(1).max(128),
+  })
+  .strict();
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
   app.post("/v1/auth/register", async (request, reply) => {

@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { eq } from "drizzle-orm";
-import { config } from "../config.js";
+import { stripControlAndHtml } from "@vespera/shared";
+import { config, roleForEmail } from "../config.js";
 import { getDb } from "../db/client.js";
 import { users } from "../db/schema.js";
 import type { AuthUser } from "../plugins/auth.js";
@@ -50,11 +51,16 @@ export async function loadUserById(id: string): Promise<AuthUser | null> {
   const rows = await db.select().from(users).where(eq(users.id, id)).limit(1);
   const row = rows[0];
   if (!row) return null;
+  const role = roleForEmail(row.email);
+  if (row.role !== role) {
+    await db.update(users).set({ role }).where(eq(users.id, row.id));
+  }
   return {
     id: row.id,
     firebaseUid: row.firebaseUid ?? "",
     email: row.email,
     displayName: row.displayName,
+    role,
     demo: false,
   };
 }
@@ -77,7 +83,8 @@ export async function registerUser(
   const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
   const id = randomUUID();
   const firebaseUid = `local:${randomUUID()}`;
-  const cleanDisplayName = displayName?.trim() || null;
+  const cleanDisplayName = displayName ? stripControlAndHtml(displayName).slice(0, 160) || null : null;
+  const role = roleForEmail(normalizedEmail);
 
   await db.insert(users).values({
     id,
@@ -86,12 +93,20 @@ export async function registerUser(
     displayName: cleanDisplayName,
     passwordHash,
     authProvider: "local",
+    role,
   });
 
   const token = await issueSessionToken(id, normalizedEmail);
   return {
     token,
-    user: { id, firebaseUid, email: normalizedEmail, displayName: cleanDisplayName, demo: false },
+    user: {
+      id,
+      firebaseUid,
+      email: normalizedEmail,
+      displayName: cleanDisplayName,
+      role,
+      demo: false,
+    },
   };
 }
 
@@ -111,6 +126,11 @@ export async function loginUser(
   const valid = await bcrypt.compare(password, row.passwordHash);
   if (!valid) throw new AuthError("Invalid email or password", 401);
 
+  const role = roleForEmail(row.email);
+  if (row.role !== role) {
+    await db.update(users).set({ role }).where(eq(users.id, row.id));
+  }
+
   const token = await issueSessionToken(row.id, row.email);
   return {
     token,
@@ -119,6 +139,7 @@ export async function loginUser(
       firebaseUid: row.firebaseUid ?? "",
       email: row.email,
       displayName: row.displayName,
+      role,
       demo: false,
     },
   };

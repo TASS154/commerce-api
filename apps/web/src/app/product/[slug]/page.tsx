@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { use, useEffect, useState, type CSSProperties } from "react";
+import { use, useEffect, useState } from "react";
+import { ProductPhoto } from "@/components/ProductPhoto";
 import { pickLocalized } from "@/lib/i18n";
 import { api, useStore } from "@/lib/store";
 import type { Product } from "@/lib/types";
@@ -18,14 +19,14 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
     setError(null);
     api<Product>(`/v1/products/${slug}`)
       .then(setProduct)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load product"));
-  }, [slug]);
+      .catch((e) => setError(e instanceof Error ? e.message : tx("productNotFound")));
+  }, [slug, tx]);
 
   if (error) {
     return (
-      <div style={{ maxWidth: 720, margin: "0 auto", padding: "48px 20px" }}>
+      <div className="page-narrow">
         <p style={{ color: "var(--danger)" }}>{error}</p>
-        <Link href="/catalog" style={{ color: "var(--accent)" }}>
+        <Link href="/catalog" className="muted" style={{ fontSize: 13 }}>
           ← {tx("backToCatalog")}
         </Link>
       </div>
@@ -34,63 +35,55 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
   if (!product) {
     return (
-      <div style={{ maxWidth: 960, margin: "0 auto", padding: "48px 20px" }}>
-        <div style={{ height: 360, borderRadius: 16, background: "var(--surface)" }} />
+      <div className="page">
+        <div className="photo-frame" style={{ height: 420 }} />
       </div>
     );
   }
 
   const name = pickLocalized(product.name, locale);
-  const deepDescription = pickLocalized(product.descriptionDeep, locale) || pickLocalized(product.description, locale);
+  const deepDescription =
+    pickLocalized(product.descriptionDeep, locale) || pickLocalized(product.description, locale);
   const specs = product.specs ?? null;
 
   return (
-    <div style={{ maxWidth: 960, margin: "0 auto", padding: "36px 20px 72px" }}>
-      <Link href="/catalog" style={{ color: "var(--text-muted)", fontSize: 13 }}>
+    <div className="page">
+      <Link href="/catalog" className="muted" style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase" }}>
         ← {tx("backToCatalog")}
       </Link>
 
-      <div
-        style={{
-          marginTop: 20,
-          display: "grid",
-          gridTemplateColumns: "minmax(260px, 1fr) minmax(280px, 1fr)",
-          gap: 32,
-        }}
-      >
-        <div
-          style={{
-            borderRadius: 18,
-            overflow: "hidden",
-            aspectRatio: "4 / 3",
-            background: product.imageUrl ? undefined : product.imageGradient,
-            border: "1px solid var(--stroke)",
-          }}
-        >
-          {product.imageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={product.imageUrl}
-              alt={name}
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-            />
-          )}
+      <div className="pdp">
+        <div className="photo-frame">
+          <ProductPhoto
+            src={product.imageUrl}
+            alt={name}
+            gradient={product.imageGradient}
+            sizes="(max-width: 860px) 100vw, 50vw"
+            priority
+          />
         </div>
 
         <div>
-          <h1 style={{ fontFamily: "var(--font-display)", fontSize: 36, fontWeight: 400, margin: "0 0 8px" }}>
+          <p className="eyebrow">{product.category}</p>
+          <h1 className="display" style={{ fontSize: 42, margin: "0 0 12px" }}>
             {name}
           </h1>
-          <p style={{ fontSize: 24, margin: "0 0 6px", color: "var(--accent)" }}>
-            R$ {(product.priceCents / 100).toFixed(2)}
-          </p>
-          <p style={{ margin: "0 0 22px", fontSize: 13, color: "var(--text-muted)" }}>
-            {product.stock > 0 ? `${product.stock} ${tx("inStock")}` : tx("outOfStock")}
+          <p style={{ fontSize: 22, margin: "0 0 8px" }}>R$ {(product.priceCents / 100).toFixed(2)}</p>
+          <p className="muted" style={{ margin: "0 0 24px", fontSize: 13 }}>
+            {product.stock === 0
+              ? tx("outOfStock")
+              : product.stock < 8
+                ? `${product.stock} ${tx("lowStock")}`
+                : `${product.stock} ${tx("inStock")}`}
           </p>
 
-          <p style={{ lineHeight: 1.7, color: "var(--text-muted)", marginBottom: 24 }}>{deepDescription}</p>
+          <p className="muted" style={{ lineHeight: 1.7, marginBottom: 28 }}>
+            {deepDescription}
+          </p>
 
           <button
+            type="button"
+            className="btn"
             disabled={product.stock === 0}
             onClick={() => {
               addToCart({
@@ -102,20 +95,21 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               setAdded(true);
               setTimeout(() => setAdded(false), 1400);
             }}
-            style={{ ...primaryBtn, opacity: product.stock === 0 ? 0.5 : 1 }}
           >
-            {added ? "✓" : tx("add")}
+            {added ? tx("added") : tx("add")}
           </button>
 
           {specs && Object.keys(specs).length > 0 && (
-            <div style={{ marginTop: 32 }}>
-              <h2 style={{ fontSize: 16, marginBottom: 10 }}>{tx("specsTitle")}</h2>
+            <div style={{ marginTop: 40 }}>
+              <h2 className="eyebrow">{tx("specsTitle")}</h2>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
                 <tbody>
                   {Object.entries(specs).map(([key, value]) => (
-                    <tr key={key} style={{ borderTop: "1px solid var(--stroke)" }}>
-                      <td style={{ padding: "8px 0", color: "var(--text-muted)", width: "40%" }}>{key}</td>
-                      <td style={{ padding: "8px 0" }}>{value}</td>
+                    <tr key={key} style={{ borderTop: "1px solid var(--rule)" }}>
+                      <td className="muted" style={{ padding: "10px 0", width: "42%" }}>
+                        {key}
+                      </td>
+                      <td style={{ padding: "10px 0" }}>{value}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -127,14 +121,3 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
     </div>
   );
 }
-
-const primaryBtn: CSSProperties = {
-  background: "var(--accent)",
-  color: "#1a1510",
-  border: "none",
-  borderRadius: 999,
-  padding: "12px 22px",
-  fontWeight: 600,
-  cursor: "pointer",
-  minWidth: 120,
-};

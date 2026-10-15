@@ -1,5 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { API_BODY_LIMIT, WEBHOOK_BODY_LIMIT } from "@vespera/shared";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -14,6 +15,8 @@ function envInt(name: string, fallback: number): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
+export type UserRole = "customer" | "ops";
+
 export const config = {
   nodeEnv: env("NODE_ENV", "development"),
   isProd: env("NODE_ENV", "development") === "production",
@@ -25,11 +28,17 @@ export const config = {
   databaseUrl: env("DATABASE_URL"),
   pglitePath: env("PGLITE_PATH", path.join(__dirname, "..", "data", "pglite")),
   sessionJwtSecret: env("SESSION_JWT_SECRET", "vespera-dev-jwt-change-me"),
+  adminEmails: env("ADMIN_EMAILS", "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean),
   rateLimit: {
     windowMs: envInt("RATE_LIMIT_WINDOW_MS", 60_000),
     max: envInt("RATE_LIMIT_MAX", 60),
     authMax: envInt("RATE_LIMIT_AUTH_MAX", 20),
   },
+  bodyLimit: API_BODY_LIMIT,
+  webhookBodyLimit: WEBHOOK_BODY_LIMIT,
   firebase: {
     projectId: env("FIREBASE_PROJECT_ID"),
     clientEmail: env("FIREBASE_CLIENT_EMAIL"),
@@ -55,4 +64,12 @@ export function firebaseIsConfigured(): boolean {
       config.firebase.clientEmail &&
       config.firebase.privateKey,
   );
+}
+
+export function corsAllowlist(): string[] {
+  return config.corsOrigin.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+export function roleForEmail(email: string): UserRole {
+  return config.adminEmails.includes(email.trim().toLowerCase()) ? "ops" : "customer";
 }

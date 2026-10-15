@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { LOCALES, type Locale } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 
@@ -11,62 +11,31 @@ export function Shell({ children }: { children: ReactNode }) {
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      <header
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 20,
-          backdropFilter: "blur(12px)",
-          background: "rgba(15,14,12,0.82)",
-          borderBottom: "1px solid var(--stroke)",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 1120,
-            margin: "0 auto",
-            padding: "14px 20px",
-            display: "flex",
-            alignItems: "center",
-            gap: 18,
-          }}
-        >
-          <Link href="/" style={{ fontFamily: "var(--font-display)", fontSize: 28, letterSpacing: "-0.02em" }}>
+      <header className="site-header">
+        <div className="site-header-inner">
+          <Link href="/" className="wordmark">
             {tx("brand")}
           </Link>
-          <nav style={{ display: "flex", gap: 14, marginLeft: 12 }}>
-            <Link href="/catalog" style={{ color: "var(--text-muted)", fontSize: 14 }}>
-              {tx("shop")}
-            </Link>
-            <Link
-              href="/cart"
-              className={cartPulse ? "cart-badge-pulse" : undefined}
-              style={{ color: "var(--text-muted)", fontSize: 14, display: "inline-block" }}
-            >
+          <nav className="nav-links">
+            <Link href="/catalog">{tx("shop")}</Link>
+            <Link href="/cart" className={cartPulse ? "cart-badge-pulse" : undefined}>
               {tx("cart")}
               {cartCount > 0 ? ` (${cartCount})` : ""}
             </Link>
-            <Link href="/architecture" style={{ color: "var(--text-muted)", fontSize: 14 }}>
-              {tx("architecture")}
-            </Link>
-            <a href={docsUrl} target="_blank" rel="noreferrer" style={{ color: "var(--text-muted)", fontSize: 14 }}>
+            <Link href="/architecture">{tx("architecture")}</Link>
+            <a href={docsUrl} target="_blank" rel="noreferrer">
               {tx("docs")}
             </a>
           </nav>
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
-            <label style={{ fontSize: 12, color: "var(--text-muted)" }}>
-              {tx("lang")}{" "}
+          <div className="header-tools">
+            <label className="field" style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <span className="eyebrow" style={{ margin: 0 }}>
+                {tx("lang")}
+              </span>
               <select
                 value={locale}
                 onChange={(e) => setLocale(e.target.value as Locale)}
-                style={{
-                  marginLeft: 6,
-                  background: "var(--surface)",
-                  color: "var(--text)",
-                  border: "1px solid var(--stroke)",
-                  borderRadius: 8,
-                  padding: "6px 8px",
-                }}
+                aria-label={tx("lang")}
               >
                 {LOCALES.map((l) => (
                   <option key={l} value={l}>
@@ -76,19 +45,20 @@ export function Shell({ children }: { children: ReactNode }) {
               </select>
             </label>
             {session ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span
-                  style={{ fontSize: 12, color: "var(--text-muted)", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}
+                  className="muted"
+                  style={{ fontSize: 13, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}
                   title={session.email}
                 >
                   {session.email}
                 </span>
-                <button onClick={signOut} style={btnGhost}>
+                <button type="button" onClick={signOut} className="btn-ghost" style={{ padding: "8px 14px" }}>
                   {tx("logout")}
                 </button>
               </div>
             ) : (
-              <Link href="/auth" style={btnPrimary}>
+              <Link href="/auth" className="btn" style={{ padding: "8px 16px" }}>
                 {tx("signIn")}
               </Link>
             )}
@@ -96,36 +66,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
       </header>
       <main style={{ flex: 1 }}>{children}</main>
-      <footer
-        style={{
-          borderTop: "1px solid var(--stroke)",
-          padding: "28px 20px",
-          color: "var(--text-muted)",
-          fontSize: 13,
-          textAlign: "center",
-        }}
-      >
-        {tx("secureNote")}
-      </footer>
+      <footer className="site-footer">{tx("secureNote")}</footer>
     </div>
   );
 }
-
-const btnPrimary: CSSProperties = {
-  background: "var(--accent)",
-  color: "#1a1510",
-  border: "none",
-  borderRadius: 999,
-  padding: "8px 14px",
-  fontWeight: 600,
-  cursor: "pointer",
-};
-
-const btnGhost: CSSProperties = {
-  background: "transparent",
-  color: "var(--text-muted)",
-  border: "1px solid var(--stroke)",
-  borderRadius: 999,
-  padding: "8px 14px",
-  cursor: "pointer",
-};

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { firebaseGoogleIsConfigured, signInWithGoogle } from "@/lib/firebase-google";
 import { useStore } from "@/lib/store";
 
@@ -65,70 +65,71 @@ export default function AuthPage() {
 
   if (session) {
     return (
-      <div style={{ maxWidth: 480, margin: "0 auto", padding: "64px 20px", textAlign: "center" }}>
-        <p style={{ color: "var(--text-muted)", marginBottom: 6 }}>{tx("loggedInAs")}</p>
+      <div className="page-narrow" style={{ textAlign: "center" }}>
+        <p className="muted" style={{ marginBottom: 6 }}>
+          {tx("loggedInAs")}
+        </p>
         <p style={{ fontSize: 18, marginBottom: 24 }}>{session.email}</p>
-        <a href="/cart" style={primaryBtn}>
+        <a href="/cart" className="btn">
           {tx("goToCart")}
         </a>
         {success && (
-          <p style={{ marginTop: 16, fontSize: 13, color: "var(--success)" }}>{tx("authSuccessRedirect")}</p>
+          <p className="muted" style={{ marginTop: 16, fontSize: 13 }}>
+            {tx("authSuccessRedirect")}
+          </p>
         )}
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: 420, margin: "0 auto", padding: "48px 20px 72px" }}>
-      <h1 style={{ fontFamily: "var(--font-display)", fontSize: 34, fontWeight: 400, marginBottom: 8 }}>
+    <div className="page-narrow" style={{ maxWidth: 440 }}>
+      <p className="eyebrow">{tx("signIn")}</p>
+      <h1 className="display" style={{ fontSize: 40, margin: "0 0 10px" }}>
         {tx("authTitle")}
       </h1>
-      <p style={{ color: "var(--text-muted)", marginTop: 0, marginBottom: 26, fontSize: 14, lineHeight: 1.5 }}>
+      <p className="muted" style={{ marginTop: 0, marginBottom: 32, fontSize: 15, lineHeight: 1.55 }}>
         {tx("authLead")}
       </p>
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 20, background: "var(--surface)", borderRadius: 999, padding: 4 }}>
-        <button
-          type="button"
-          onClick={() => setTab("login")}
-          style={{ ...tabBtn, ...(tab === "login" ? tabBtnActive : {}) }}
-        >
+      <div className="filters" style={{ marginTop: 0 }}>
+        <button type="button" className={`filter${tab === "login" ? " is-on" : ""}`} onClick={() => setTab("login")}>
           {tx("tabLogin")}
         </button>
         <button
           type="button"
+          className={`filter${tab === "register" ? " is-on" : ""}`}
           onClick={() => setTab("register")}
-          style={{ ...tabBtn, ...(tab === "register" ? tabBtnActive : {}) }}
         >
           {tx("tabRegister")}
         </button>
       </div>
 
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
+      <form onSubmit={onSubmit} style={{ display: "grid", gap: 14 }}>
         {tab === "register" && (
-          <label style={label}>
+          <label className="field">
             {tx("nameLabel")}
             <input
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              style={input}
               autoComplete="name"
+              maxLength={160}
             />
           </label>
         )}
-        <label style={label}>
+        <label className="field">
           {tx("emailLabel")}
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={input}
             autoComplete="email"
+            maxLength={320}
           />
         </label>
-        <label style={label}>
+        <label className="field">
           {tx("passwordLabel")}
           <input
             type="password"
@@ -136,99 +137,48 @@ export default function AuthPage() {
             minLength={tab === "register" ? 8 : undefined}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={input}
             autoComplete={tab === "register" ? "new-password" : "current-password"}
+            maxLength={128}
           />
-          {tab === "register" && (
-            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{tx("passwordHint")}</span>
-          )}
+          {tab === "register" && <span style={{ fontSize: 12 }}>{tx("passwordHint")}</span>}
         </label>
 
-        {error && <p style={{ color: "var(--danger)", fontSize: 13, margin: 0 }}>{error}</p>}
+        {error && (
+          <p style={{ color: "var(--danger)", fontSize: 13, margin: 0 }}>{error}</p>
+        )}
 
-        <button type="submit" disabled={busy} style={{ ...primaryBtn, width: "100%" }}>
+        <button type="submit" disabled={busy} className="btn">
           {tab === "register" ? tx("registerCta") : tx("loginCta")}
         </button>
       </form>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "22px 0" }}>
-        <div style={{ flex: 1, height: 1, background: "var(--stroke)" }} />
-        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{tx("orDivider")}</span>
-        <div style={{ flex: 1, height: 1, background: "var(--stroke)" }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "28px 0" }}>
+        <div style={{ flex: 1, height: 1, background: "var(--rule)" }} />
+        <span className="eyebrow" style={{ margin: 0 }}>
+          {tx("orDivider")}
+        </span>
+        <div style={{ flex: 1, height: 1, background: "var(--rule)" }} />
       </div>
 
       <div style={{ display: "grid", gap: 10 }}>
         {googleReady ? (
-          <button type="button" disabled={busy} onClick={onGoogle} style={{ ...secondaryBtn, width: "100%" }}>
+          <button type="button" disabled={busy} onClick={onGoogle} className="btn-ghost">
             {tx("googleCta")}
           </button>
         ) : (
           <div>
-            <button type="button" disabled style={{ ...secondaryBtn, width: "100%", opacity: 0.6, cursor: "not-allowed" }}>
+            <button type="button" disabled className="btn-ghost">
               {tx("googleStub")}
             </button>
-            <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "6px 0 0" }}>{tx("googleStubHint")}</p>
+            <p className="muted" style={{ fontSize: 12, margin: "8px 0 0" }}>
+              {tx("googleStubHint")}
+            </p>
           </div>
         )}
-        <button type="button" disabled={busy} onClick={onDemo} style={{ ...secondaryBtn, width: "100%" }}>
+        <button type="button" disabled={busy} onClick={onDemo} className="btn-ghost">
           {tx("demoCta")}
         </button>
       </div>
     </div>
   );
 }
-
-const label: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 6,
-  fontSize: 13,
-  color: "var(--text-muted)",
-};
-
-const input: CSSProperties = {
-  background: "var(--surface)",
-  color: "var(--text)",
-  border: "1px solid var(--stroke)",
-  borderRadius: 10,
-  padding: "10px 12px",
-  fontSize: 14,
-};
-
-const primaryBtn: CSSProperties = {
-  background: "var(--accent)",
-  color: "#1a1510",
-  border: "none",
-  borderRadius: 999,
-  padding: "12px 16px",
-  fontWeight: 600,
-  cursor: "pointer",
-  display: "inline-block",
-  textAlign: "center",
-};
-
-const secondaryBtn: CSSProperties = {
-  background: "transparent",
-  color: "var(--text)",
-  border: "1px solid var(--stroke)",
-  borderRadius: 999,
-  padding: "12px 16px",
-  cursor: "pointer",
-};
-
-const tabBtn: CSSProperties = {
-  flex: 1,
-  background: "transparent",
-  color: "var(--text-muted)",
-  border: "none",
-  borderRadius: 999,
-  padding: "8px 0",
-  cursor: "pointer",
-  fontWeight: 600,
-  fontSize: 13,
-};
-
-const tabBtnActive: CSSProperties = {
-  background: "var(--bg-elevated)",
-  color: "var(--text)",
-};

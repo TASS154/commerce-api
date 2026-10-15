@@ -49,6 +49,14 @@ export function getDbEngine(): "postgres" | "pglite" {
   return engine;
 }
 
+/** Run `fn` inside a Drizzle transaction. Conditional UPDATEs remain the race guard. */
+export async function withTransaction<T>(fn: (tx: Db) => Promise<T>): Promise<T> {
+  const database = getDb() as unknown as {
+    transaction: (cb: (tx: Db) => Promise<T>) => Promise<T>;
+  };
+  return database.transaction(fn);
+}
+
 async function migrate(database: Db) {
   await database.execute(sql`
     CREATE TABLE IF NOT EXISTS products (
@@ -72,6 +80,7 @@ async function migrate(database: Db) {
       firebase_uid varchar(128) NOT NULL UNIQUE,
       email varchar(320) NOT NULL,
       display_name varchar(160),
+      role varchar(16) NOT NULL DEFAULT 'customer',
       created_at timestamptz NOT NULL DEFAULT now()
     );
   `);
@@ -158,6 +167,7 @@ async function migrateAlter(database: Db) {
     `ALTER TABLE users ALTER COLUMN firebase_uid DROP NOT NULL;`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash text;`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider varchar(16) NOT NULL DEFAULT 'local';`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS role varchar(16) NOT NULL DEFAULT 'customer';`,
     `CREATE UNIQUE INDEX IF NOT EXISTS users_email_uidx ON users(email);`,
   ];
 

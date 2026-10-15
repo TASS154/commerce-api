@@ -2,7 +2,7 @@ import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { eq } from "drizzle-orm";
 import admin from "firebase-admin";
-import { config, firebaseIsConfigured } from "../config.js";
+import { config, firebaseIsConfigured, roleForEmail, type UserRole } from "../config.js";
 import { getDb } from "../db/client.js";
 import { users } from "../db/schema.js";
 import { loadUserById, verifySessionToken } from "../services/auth-local.js";
@@ -12,6 +12,7 @@ export type AuthUser = {
   firebaseUid: string;
   email: string;
   displayName: string | null;
+  role: UserRole;
   demo: boolean;
 };
 
@@ -48,12 +49,20 @@ function initFirebase() {
   firebaseReady = true;
 }
 
+async function persistRole(id: string, role: UserRole, stored: string | null | undefined) {
+  if (stored === role) return;
+  const db = getDb();
+  await db.update(users).set({ role }).where(eq(users.id, id));
+}
+
 async function upsertUser(input: {
   firebaseUid: string;
   email: string;
   displayName?: string | null;
 }): Promise<AuthUser> {
   const db = getDb();
+  const email = input.email.toLowerCase();
+  const role = roleForEmail(email);
   const existing = await db
     .select()
     .from(users)
@@ -61,11 +70,13 @@ async function upsertUser(input: {
     .limit(1);
 
   if (existing[0]) {
+    await persistRole(existing[0].id, role, existing[0].role);
     return {
       id: existing[0].id,
       firebaseUid: existing[0].firebaseUid ?? "",
       email: existing[0].email,
       displayName: existing[0].displayName,
+      role,
       demo: input.firebaseUid.startsWith("demo:"),
     };
   }
@@ -74,16 +85,18 @@ async function upsertUser(input: {
   await db.insert(users).values({
     id,
     firebaseUid: input.firebaseUid,
-    email: input.email,
+    email,
     displayName: input.displayName ?? null,
     authProvider: input.firebaseUid.startsWith("demo:") ? "demo" : "firebase",
+    role,
   });
 
   return {
     id,
     firebaseUid: input.firebaseUid,
-    email: input.email,
+    email,
     displayName: input.displayName ?? null,
+    role,
     demo: input.firebaseUid.startsWith("demo:"),
   };
 }

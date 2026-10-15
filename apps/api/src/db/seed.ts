@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { and, count, eq, isNull } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import { getDb } from "./client.js";
 import { products } from "./schema.js";
 
-function picsum(slug: string): string {
-  return `https://picsum.photos/seed/vespera-${slug}/900/700`;
+function unsplash(photoId: string): string {
+  return `https://images.unsplash.com/${photoId}?auto=format&fit=crop&w=1400&q=80`;
 }
 
 const CATALOG = [
@@ -16,7 +16,7 @@ const CATALOG = [
     stock: 42,
     featured: true,
     imageGradient: "linear-gradient(145deg,#1c1917 0%,#44403c 45%,#a8a29e 100%)",
-    imageUrl: picsum("obsidian-desk-lamp"),
+    imageUrl: unsplash("photo-1543198126-a8ad8e47fb22"),
     name: {
       pt: "Luminária Obsidian",
       en: "Obsidian Desk Lamp",
@@ -46,7 +46,7 @@ const CATALOG = [
     stock: 80,
     featured: true,
     imageGradient: "linear-gradient(145deg,#78716c 0%,#d6d3d1 55%,#fafaf9 100%)",
-    imageUrl: picsum("linen-throw-sand"),
+    imageUrl: unsplash("photo-1522771739844-6a9f6d5f14af"),
     name: {
       pt: "Manta Linen Sand",
       en: "Linen Throw — Sand",
@@ -76,7 +76,7 @@ const CATALOG = [
     stock: 120,
     featured: false,
     imageGradient: "linear-gradient(145deg,#292524 0%,#57534e 40%,#e7e5e4 100%)",
-    imageUrl: picsum("ceramic-pourer"),
+    imageUrl: unsplash("photo-1578749556568-bc2c40e68b61"),
     name: {
       pt: "Jarra Cerâmica Stone",
       en: "Stone Ceramic Pourer",
@@ -106,7 +106,7 @@ const CATALOG = [
     stock: 35,
     featured: true,
     imageGradient: "linear-gradient(145deg,#1c1917 0%,#78350f 50%,#d6d3d1 100%)",
-    imageUrl: picsum("walnut-tray"),
+    imageUrl: unsplash("photo-1595428774223-ef52624120d2"),
     name: {
       pt: "Bandeja Nogueira",
       en: "Walnut Catchall Tray",
@@ -136,7 +136,7 @@ const CATALOG = [
     stock: 200,
     featured: false,
     imageGradient: "linear-gradient(145deg,#44403c 0%,#a8a29e 50%,#f5f5f4 100%)",
-    imageUrl: picsum("quiet-candle"),
+    imageUrl: unsplash("photo-1603006905003-be475563bc59"),
     name: {
       pt: "Vela Quiet Cedar",
       en: "Quiet Cedar Candle",
@@ -166,7 +166,7 @@ const CATALOG = [
     stock: 55,
     featured: false,
     imageGradient: "linear-gradient(145deg,#0c0a09 0%,#57534e 55%,#fafaf9 100%)",
-    imageUrl: picsum("steel-carafe"),
+    imageUrl: unsplash("photo-1602143407151-7111542de6e8"),
     name: {
       pt: "Garrafa Inox Brushed",
       en: "Brushed Steel Carafe",
@@ -196,7 +196,7 @@ const CATALOG = [
     stock: 18,
     featured: true,
     imageGradient: "linear-gradient(145deg,#1c1917 0%,#3f3f46 40%,#a1a1aa 100%)",
-    imageUrl: picsum("wool-runner"),
+    imageUrl: unsplash("photo-1618221195710-dd6b41faaea6"),
     name: {
       pt: "Passadeira Merino",
       en: "Merino Hall Runner",
@@ -226,7 +226,7 @@ const CATALOG = [
     stock: 90,
     featured: false,
     imageGradient: "linear-gradient(145deg,#292524 0%,#78716c 45%,#e7e5e4 100%)",
-    imageUrl: picsum("glass-tumbler-set"),
+    imageUrl: unsplash("photo-1514362545857-3bc16c4c7d1b"),
     name: {
       pt: "Conjunto Copos Smoke",
       en: "Smoke Tumbler Set (4)",
@@ -280,6 +280,6 @@ export async function ensureCatalogEnrichment() {
         imageUrl: item.imageUrl,
         specs: item.specs,
       })
-      .where(and(eq(products.slug, item.slug), isNull(products.imageUrl)));
+      .where(eq(products.slug, item.slug));
   }
 }

@@ -11,7 +11,7 @@ Premium commerce **demo platform** with a separately deployable Node API and a N
 | Data | Postgres (Docker) or embedded **PGlite** for zero-ops local runs |
 | Auth | Firebase Auth (Google) when configured · **Demo Auth** otherwise |
 | Payments | Mock gateway by default · live adapter stub when secrets are set |
-| Security | Helmet, CORS allowlist, HMAC webhooks, DB-backed IP rate limits, idempotent checkout, inventory race guard |
+| Security | Helmet + CSP, CORS allowlist, HMAC webhooks, DB-backed rate limits (IP + user id on checkout), idempotent checkout, inventory CAS, `customer`/`ops` roles |
 
 ## Quick start
 
@@ -55,7 +55,7 @@ Authorization: Bearer demo:recruiter@vespera.demo
 ```
 
 2. Add products → checkout with Pix or card.  
-3. For Pix, use **Simulate Pix paid** (calls `/v1/demo/simulate-pix-paid`).
+3. For Pix, use **Simulate Pix paid** (calls `/v1/demo/simulate-pix-paid`). In production that route requires an `ops` account.
 
 ### Optional Firebase Google sign-in
 
@@ -70,12 +70,17 @@ Set `PAYMENT_SECRET_KEY`, `PAYMENT_PUBLIC_KEY`, `PAYMENT_WEBHOOK_SECRET`, and `P
 - **Web** → Vercel (`apps/web`) with `NEXT_PUBLIC_API_URL` pointing at the API.
 - **API** → any Node host (Railway, Fly, Render, VPS) behind a load balancer. Replicas stay stateless; rate limits live in Postgres.
 
+## Environment
+
+`ADMIN_EMAILS` — comma-separated list of emails granted the `ops` role (default empty). Everyone else is `customer`. In production, `POST /v1/demo/simulate-pix-paid` is limited to `ops`. Authenticated customers can still read `GET /v1/security`.
+
 ## Security notes (public repo)
 
 - Never commit `.env`.
 - Logs redact `Authorization` and payment/Firebase private fields.
-- Webhook verification uses timing-safe HMAC comparison.
-- Rate limits are enforced per IP and route class.
+- Webhook verification uses timing-safe HMAC comparison; webhook JSON is capped at 16 KiB.
+- Rate limits are enforced per IP and route class; checkout is also keyed by user id.
+- Request id is returned as `x-request-id`.
 
 ## License
 

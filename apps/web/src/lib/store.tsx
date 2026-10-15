@@ -40,9 +40,13 @@ type Store = {
 
 const Ctx = createContext<Store | null>(null);
 
+function envApiBase(): string {
+  return (process.env.NEXT_PUBLIC_API_URL?.trim() || "").replace(/\/$/, "");
+}
+
 function resolveApiBase(): string {
-  const fromEnv = process.env.NEXT_PUBLIC_API_URL?.trim();
-  if (fromEnv) return fromEnv.replace(/\/$/, "");
+  const fromEnv = envApiBase();
+  if (fromEnv) return fromEnv;
   if (typeof window !== "undefined") {
     const host = window.location.hostname;
     if (host === "localhost" || host === "127.0.0.1") return "http://localhost:4000";
@@ -52,14 +56,19 @@ function resolveApiBase(): string {
   return "";
 }
 
-const API_BASE = resolveApiBase();
-
 export function Providers({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("en");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [cartPulse, setCartPulse] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
+  const [apiBase, setApiBase] = useState(envApiBase);
   const pulseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (apiBase) return;
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1") setApiBase("http://localhost:4000");
+  }, [apiBase]);
 
   useEffect(() => {
     const saved = localStorage.getItem("vespera.locale") as Locale | null;
@@ -158,8 +167,8 @@ export function Providers({ children }: { children: ReactNode }) {
       registerLocal,
       loginLocal,
       setSessionToken,
-      apiBase: API_BASE,
-      docsUrl: API_BASE ? `${API_BASE}/docs` : "#",
+      apiBase,
+      docsUrl: apiBase ? `${apiBase}/docs` : "#",
     }),
     [
       locale,
@@ -174,6 +183,7 @@ export function Providers({ children }: { children: ReactNode }) {
       registerLocal,
       loginLocal,
       setSessionToken,
+      apiBase,
     ],
   );
 
