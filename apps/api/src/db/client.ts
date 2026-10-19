@@ -16,6 +16,7 @@ function createPg(url: string) {
   const client = postgres(url, {
     max: 10,
     idle_timeout: 20,
+    connect_timeout: 5,
     prepare: false,
   });
   return drizzlePg(client, { schema });
@@ -29,12 +30,22 @@ function createPglite(dataDir: string) {
 
 export async function initDb(): Promise<Db> {
   if (config.databaseUrl) {
-    engine = "postgres";
-    db = createPg(config.databaseUrl);
-  } else {
-    engine = "pglite";
-    db = createPglite(config.pglitePath);
+    try {
+      engine = "postgres";
+      db = createPg(config.databaseUrl);
+      await migrate(db);
+      await migrateAlter(db);
+      return db;
+    } catch (err) {
+      if (config.isProd) throw err;
+      const error = err as Error & { code?: string };
+      const detail = error.message || error.code || "connection failed";
+      console.warn(`[db] Postgres unreachable (${detail}). Using embedded PGlite.`);
+    }
   }
+
+  engine = "pglite";
+  db = createPglite(config.pglitePath);
   await migrate(db);
   await migrateAlter(db);
   return db;
